@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      overflow: hidden;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-size: 8px; /* Match the React Native font size */
+    }
+    .full-size-button {
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      margin: 0;
+      background-color: #8bc34a;
+      color: #324818;
+      border: none;
+      cursor: pointer;
+    }
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100vw; /* Full viewport width */
+      height: 100vh; /* Full viewport height */
+      padding: 0;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+      <input type="file" id="fileInput" accept=".torrent" hidden />
+      <video id="videoPlayer" hidden></video>
+      <button class="full-size-button" id="fileButton" onclick="addTorrentFile()">+ Torrent File</button>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <script>
+    var totalFiles = 0;
+    var processedFiles = 0;
+
+    var MAX_DOWNLOAD_SPEED = 0;
+    var MAX_UPLOAD_SPEED = 0;
+
+    var torrents = new Set();
+
+    function min(a, b) {
+      return a < b ? a : b;
+    }
+
+    function isVideoFile(filename) {
+      const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv'];
+      return videoExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+    }
+
+    function setMaxSpeeds(NEW_MAX_DOWNLOAD_SPEED, NEW_MAX_UPLOAD_SPEED) {
+      MAX_DOWNLOAD_SPEED = NEW_MAX_UPLOAD_SPEED * 1000,
+      MAX_UPLOAD_SPEED = NEW_MAX_UPLOAD_SPEED * 1000;
+    }
+
+    function getRemainingTime(torrent) {
+      if (torrent.done) {
+        return 'Done.';
+      } else {
+        let remaining = moment.duration(torrent.timeRemaining / 1000, 'seconds').humanize();
+        return remaining[0].toUpperCase() + remaining.substring(1) + ' remaining.';
+      }
+    }
+
+    function prettyBytes(num) {
+      const units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+      const neg = num < 0;
+      if (neg) num = -num;
+      if (num < 1) return (neg ? '-' : '') + num + ' B';
+      const exponent = Math.min(Math.floor(Math.log(num) / Math.log(1000)), units.length - 1);
+      const unit = units[exponent];
+      num = Number((num / Math.pow(1000, exponent)).toFixed(1));
+      return (neg ? '-' : '') + num + ' ' + unit;
+    }
+
+    function sendMessageToReactNative(message) {
+      // console.log(message);
+      window.ReactNativeWebView.postMessage(JSON.stringify(message));
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function(event) {
+      if (fileInput.files.length === 0) {
+        alert('Please select a .torrent file.');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      if (!file.name.endsWith('.torrent')) {
+        alert('Please select a .torrent file.');
+        return;
+      }
+      addTorrent(file);
+    });
+
+    function addTorrentFile() {
+      document.getElementById('fileInput').click();
+    }
+
+    function addTorrent(torrentId) {
+      var client = new WebTorrent();
+      client.add(torrentId, function (torrent) {
+        if (getTorrent(torrent.infoHash)) {
+          alert('duplicated');
+          sendMessageToReactNative({flag: -1}) // dupplicate torren terror
+          torrent.destroy();
+        } else {
+          torrents.add(torrent);
+          sendMessageToReactNative({flag: 0, torrentInfoHash: torrent.infoHash}); // start torrent downloading...
+        }
+
+        // startDownload(torrent.infoHash);
+      });
+    }
+
+    function startDownload(torrentInfo) {
+      var torrent = getTorrent(torrentInfo);
+
+      torrent.sentCount  = 0;
+      torrent.files.forEach((file) => {
+        file.getBlob((err, blob) => {
+            if (err) throw err;
+            var reader = new FileReader();
+            reader.onloadend = function() {
+              let base64Data = reader.result.split(',')[1]; // Extract base64 string
+              const chunkSize = 1024 * 1024; // 1 MB per chunk
+              const totalChunks = Math.ceil(base64Data.length / chunkSize);
+
+              for (let i = 0; i < totalChunks; i++) {
+                const chunk = base64Data.slice(i * chunkSize, (i + 1) * chunkSize);
+                sendMessageToReactNative({
+                  flag: 6, 
+                  torrentInfoHash: torrent.infoHash, 
+                  fileName: file.name, 
+                  chunk: chunk,
+                  chunkIndex: i
+                }); // sending progress data
+              }
+            };
+            reader.readAsDataURL(blob); // Convert blob to base64
+
+        });
+      });
+
+      torrent.isPaused = false;
+
+      torrent.on('done', onDone);
+      torrent.progressInterval = setInterval(onProgress, 800);
+
+      function onProgress() {
+        if (torrent.isPaused) {
+          return;
+        }
+
+        if (MAX_DOWNLOAD_SPEED > 0 && torrent.downloadSpeed > MAX_DOWNLOAD_SPEED) {
+          torrent.pause();
+          setTimeout(() => torrent.resume(), 800);
+        }
+
+        if (MAX_UPLOAD_SPEED > 0 && torrent.uploadSpeed > MAX_UPLOAD_SPEED) {
+          torrent.pause();
+          setTimeout(() => torrent.resume(), 800);
+        }
+
+        var currentStatus = {
+          torrentName: torrent.name,
+          infoHash: torrent.infoHash,
+          numPeers: torrent.numPeers + (torrent.numPeers === 1 ? ' peer' : ' peers'),
+          downloaded: prettyBytes(torrent.downloaded),
+          length: prettyBytes(torrent.length),
+          remaining: getRemainingTime(torrent),
+          downloadSpeed: prettyBytes(min(torrent.downloadSpeed, MAX_DOWNLOAD_SPEED>0?MAX_DOWNLOAD_SPEED:torrent.downloadSpeed+1)) + '/s',
+          uploadSpeed: prettyBytes(min(torrent.uploadSpeed, MAX_UPLOAD_SPEED>0?MAX_UPLOAD_SPEED:torrent.uploadSpeed+1)) + '/s',
+        }
+
+        sendMessageToReactNative({flag: 1, currentStatus}) // sending progress data
+      }
+
+      function onDone() {
+        setTimeout(() => {
+          clearInterval(torrent.progressInterval);
+
+          var torrentInfo = {
+            torrentName: torrent.name,
+            infoHash: torrent.infoHash,
+            length: prettyBytes(torrent.length),
+            fileCount: torrent.files.length,
+            location: ''
+          };
+          sendMessageToReactNative({flag: 3, torrentInfo}); // done action for torrent downloading...
+        }, 2700);
+      }
+    }
+
+    function getTorrent(torrentInfoHash) {
+      for (let torrent of torrents) {
+        if (torrent.infoHash === torrentInfoHash) {
+          return torrent;
+        }
+      }
+      return null;
+    }
+
+    function pauseDownload(torrentInfoHash) {
+      var torrent = getTorrent(torrentInfoHash);
+      if (torrent) {
+        torrent.pause();
+        torrent.isPaused = true;
+      }
+    }
+
+    function resumeDownload(torrentInfoHash) {
+      var torrent = getTorrent(torrentInfoHash);
+      if (torrent) {
+        torrent.resume();
+        torrent.isPaused = false;
+      }
+    }
+
+    function stopDownload(torrentInfoHash) {
+      var torrent = getTorrent(torrentInfoHash);
+      if (torrent) {
+        clearInterval(torrent.progressInterval);
+        torrent.destroy();
+        torrents.delete(torrent);
+        sendMessageToReactNative({flag: 2, torrentInfoHash}) // stop torrent downloading...
+      }
+    }
+
+    function stopDuplication(torrentInfoHash) {
+      var torrent = getTorrent(torrentInfoHash);
+      if (torrent) {
+        clearInterval(torrent.progressInterval);
+        torrent.destroy();
+        torrents.delete(torrent);
+      }
+    }
+
+    document.addEventListener('message', function (event) {
+      try {
+        var data = JSON.parse(event.data);
+        if (data.action === 'addTorrentLink') {
+          addTorrent(data.torrentId);
+        } else if (data.action === 'startDownload') {
+          startDownload(data.torrentInfoHash);
+        } else if (data.action === 'pauseDownload') {
+          pauseDownload(data.torrentInfoHash);
+        } else if (data.action === 'resumeDownload') {
+          resumeDownload(data.torrentInfoHash);
+        } else if (data.action === 'stopDownload') {
+          stopDownload(data.torrentInfoHash);
+        } else if (data.action === 'stopDuplication') {
+          stopDuplication(data.torrentInfoHash);
+        } else if (data.action === 'setMaxSpeeds') {
+          setMaxSpeeds(data.MAX_DOWNLOAD_SPEED, data.MAX_UPLOAD_SPEED);
+        }
+      } catch (e) {
+        console.error('Failed to parse message:', e);
+      }
+    });
+
+  </script>
+</body>
+</html>
