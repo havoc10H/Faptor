@@ -25,7 +25,7 @@ const SettingStyle = StyleSheet.create({
     titleText: {
         fontSize: 24,
         fontWeight: '700',
-        color: 'white'
+        color: '#f5f5f5'
     },
 
     contentView: {
@@ -40,10 +40,10 @@ const SettingStyle = StyleSheet.create({
         marginTop: 44,
         marginBottom: 6,
         alignSelf: 'flex-start',
-        fontSize: 18,
+        fontSize: 16,
         lineHeight: 21,
         fontWeight: '500',
-        color: '#888'
+        color: '#111'
     },
 
     inputview: {
@@ -55,9 +55,9 @@ const SettingStyle = StyleSheet.create({
 
     speedInput: {
         flex: 1,
-        height: 38,
+        height: 36,
         borderRadius: 4,
-        fontSize: 14,
+        fontSize: 12,
         borderColor: '#888',
         borderWidth: 1,
         paddingLeft: 12,
@@ -66,22 +66,22 @@ const SettingStyle = StyleSheet.create({
 
     byteText:{
         marginLeft: 8,
-        fontSize: 18,
+        fontSize: 12,
     },
 
     saveButton: {
         width: 120,
         height: 36,
         marginTop: 32,
-        borderRadius: 8,
+        borderRadius: 2,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#8bc34a'
     },
 
     saveText: {
-        fontSize: 16,
-        color: 'white'
+        fontSize: 13,
+        color: '#111'
     },   
 })
 

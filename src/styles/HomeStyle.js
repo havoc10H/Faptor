@@ -25,7 +25,7 @@ const HomeStyle = StyleSheet.create({
 	titleText: {
 		fontSize: 24,
 		fontWeight: '700',
-		color: 'white'
+		color: '#f5f5f5'
 	},
 
 	settingButton:{
@@ -38,33 +38,34 @@ const HomeStyle = StyleSheet.create({
 		justifyContent: 'center',
 	},
 
-	settingIcon: {
-		fontSize: 28,
-		color: 'white'
-	},
 
 	settingMenu: {
 		position: 'absolute',
-		top: 0,
+		top: -2,
 		right: 0,
-		width: DEVICE_WIDTH * 0.5,
-		height: 120,
+		width: DEVICE_WIDTH * 0.45,
+		height: 107,
 		zIndex: 2,
+		borderWidth: 1,
+		borderColor: '#111',
+		borderTopColor: '#8bc34a',
 	},
 
 	settingMenuItem: {
 		width: '100%',
-		height: 36,      
-		backgroundColor: '#888',
+		height: 35,      
+		backgroundColor: '#e8f3db',
 		alignItems: 'flex-start',
 		justifyContent: 'center',
-		paddingLeft: 5
+		paddingLeft: 5,
 	},
 
 	settingMenuText: {
-		fontSize: 14,
-		color: 'white',
-		margin: 5
+		fontSize: 13,
+		color: '#111',
+		margin: 5,
+		marginTop: 2,
+		marginBottom: 0
 	}, 
 
 	contentView: {
@@ -81,7 +82,7 @@ const HomeStyle = StyleSheet.create({
 	savedInfo: {
 		margin: 10,
 		borderBottomWidth: 1, // Line thickness
-    	borderBottomColor: '#ccc', // Line color
+    	borderBottomColor: '#595', // Line color
 	},
 
 	deleteButton: {
@@ -92,12 +93,14 @@ const HomeStyle = StyleSheet.create({
 	},
 
 	deleteButtonText: {
-		fontSize: 12
+		fontSize: 12,
+		color: '#eee'
 	},
 
 	savedInfoItemText: {
 		fontSize: 10,
-	    textAlign: 'center', // Center text horizontally
+	    textAlign: 'center', // Center text horizontally,
+	    color: '#111'
 	},
 
 	// styles for downloading status
@@ -112,26 +115,27 @@ const HomeStyle = StyleSheet.create({
 	    alignItems: 'center', // Center content horizontally
 	},
 	itemText: {
-		fontSize: 14,
+		fontSize: 13,
 	    textAlign: 'center', // Center text horizontally
+	    color: '#111'
 	},
 
 	downloadingButtons: {
 	    flexDirection: 'row',
 	    justifyContent: 'space-between', // Space buttons evenly
-	    marginTop: 20,
+	    margin: 10,
+	    marginTop: 20
 	},
 	button: {
 	    flex: 1, // Allow buttons to grow equally
 	    marginHorizontal: 5, // Space between buttons
 	    justifyContent: 'center',
 	    alignItems: 'center',
-	    padding: 10,
-	    backgroundColor: '#ddd',
-	    borderRadius: 5,
-	},
-	buttonText: {
-	    fontSize: 16,
+	    padding: 8,
+	    borderColor: '#111',
+	    borderWidth: 1,
+	    borderRadius: 3,
+	    backgroundColor: '#8bc34a33'
 	},
 
 	// styles for add torrent buttons
@@ -156,7 +160,7 @@ const HomeStyle = StyleSheet.create({
 	},
 	webView: {
 		flex: 1, // Takes up half the width of the container
-		backgroundColor: 'white', // Optional: Add a background color
+		backgroundColor: 'transparent', // Optional: Add a background color
 	},
 
 	// styles for modal
@@ -168,13 +172,14 @@ const HomeStyle = StyleSheet.create({
 	},
 	modalContent: {
 		width: 320,
-		backgroundColor: '#fff',
+		backgroundColor: '#f5f5f5',
 		padding: 20,
 		borderRadius: 10,
 		alignItems: 'center',
 	},
 	modalTitle: {
-		fontSize: 18,
+		fontSize: 16,
+		color: '#111',
 		marginBottom: 10,
 	},
 	textInput: {
@@ -185,6 +190,7 @@ const HomeStyle = StyleSheet.create({
 		borderRadius: 5,
 		paddingHorizontal: 10,
 		marginBottom: 20,
+		color: '#111'
 	},
 	buttonContainer: {
 		flexDirection: 'row',
@@ -194,44 +200,47 @@ const HomeStyle = StyleSheet.create({
 	modalButton: {
 	    backgroundColor: '#8bc34a', // Change this color as needed
 	    padding: 10,
-	    borderRadius: 5,
+	    borderRadius: 3,
 	    marginHorizontal: 5,
 	    alignItems: 'center',
 	    width: 100
 	},
 	modalButtonText: {
-	    color: '#324818',
-	    fontSize: 14,
+	    color: '#111',
+	    fontSize: 13,
 	},
 
 	cellView: {
 		width: DEVICE_WIDTH,
 		height: 217,
 		marginTop: 5,
-
 	},
 
 	cellContentView: {    
 		flex: 1,
 		marginHorizontal: 16,
 		marginBottom: 10,
-		borderRadius: 10,
-		borderColor: '#ddd',
+		borderRadius: 5,
+		borderColor: '#595',
 		borderWidth: 1,
-		backgroundColor: '#f4f4f4',
+		backgroundColor: '#e8f3db',
 	},
 
 	cellTitleView: {
 		width: '100%',
 		height: 32,
-		backgroundColor: '#888',
+		backgroundColor: '#8bc34a55',
 		alignItems: 'center',
-		justifyContent: 'center'
+		justifyContent: 'center',
+		borderTopLeftRadius: 4,
+		borderLeftWidth: 10,
+		borderLeftColor: '#8bc34a'
 	},
 
 	cellTitleText: {
 		fontSize: 16,
-		color: 'white'
+		fontWeight: '500',
+		color: '#111'
 	},
 
 	scrollView: {

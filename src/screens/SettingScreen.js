@@ -35,7 +35,7 @@ export default function SettingScreen ({ navigation, route }) {
             </View>
            
             <View style = {SettingStyle.contentView}>  
-                <Text style={SettingStyle.speedText}>Speed</Text>
+                <Text style={SettingStyle.speedText}>Input Speed (0 means no limit...)</Text>
                 <View style ={SettingStyle.inputview}>
                     <TextInput
                         style={SettingStyle.speedInput}

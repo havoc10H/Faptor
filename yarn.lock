@@ -5880,11 +5880,6 @@ react-native-codegen@^0.0.18:
     jscodeshift "^0.13.1"
     nullthrows "^1.1.1"
 
-react-native-directory-picker@^0.0.2:
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/react-native-directory-picker/-/react-native-directory-picker-0.0.2.tgz#7221659d4efbf2318ad675db2e57e32646bee4bc"
-  integrity sha512-yByYVgnM4kgxDnWoU2nkXcZhXtSHW6lttJJsynLFbp6F4sHx7Si9CDaTJHlFBWYZhSlQ5Spt0lLsc/OPS0O1VQ==
-
 react-native-document-picker@^9.3.0:
   version "9.3.0"
   resolved "https://registry.yarnpkg.com/react-native-document-picker/-/react-native-document-picker-9.3.0.tgz#4651d354623367d06397fe6dbf4a496f7d92ca6b"

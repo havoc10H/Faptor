@@ -10,7 +10,6 @@ import RNFS from 'react-native-fs';
 import FlashMessage, { showMessage } from 'react-native-flash-message'; // Import FlashMessage and showMessage
 import DocumentPicker from 'react-native-document-picker';
 import FileViewer from 'react-native-file-viewer';
-import {selectDirectory} from 'react-native-directory-picker';
 import { Buffer } from 'buffer'; // Import Buffer package
 import HomeStyle from '../styles/HomeStyle'; // Adjust the path based on your folder structure
 
@@ -112,6 +111,10 @@ export default function HomeScreen ({ navigation }) {
     const updatedTorrents = torrents.filter(torrent => torrent.infoHash !== torrentInfoHash);
     setTorrents(updatedTorrents);
     saveTorrents(updatedTorrents);
+
+    const message = JSON.stringify({ action: 'deleteTorrent', torrentInfoHash });
+    console.log('delete', message);
+    sendMessageToWebview(message);
   }
 
   
@@ -286,17 +289,36 @@ export default function HomeScreen ({ navigation }) {
     }
   };
 
+  const uriToPath = async (uri) => {
+    if (uri.startsWith('content://')) {
+      const splitUri = uri.split('%3A');
+      const type = splitUri[0].split('/')[2];
+      const relativePath = splitUri[1];
+      const fullPath = `/storage/emulated/0/${relativePath}`;
+      return fullPath;
+    } else if (uri.startsWith('file://')) {
+      return uri.replace('file://', '');
+    }
+    return null;
+  };
 
   // Set settings for this app.
   const setDownloadPath = async () => {
     try {
-      const uri = await selectDirectory();
-      console.log('Selected directory URI:', uri);
+      const res = await DocumentPicker.pickDirectory();
+      if (res) {
+        const uri = res.uri;
+        console.log('Selected directory URI:', uri);
 
-      // Assuming `convertUriToPath` is a custom function or method
-      const path = await resolveUri(uri);
-      console.log('Converted directory path:', path);
-      if (path) {
+        let path;
+        if (Platform.OS === 'android') {
+          // Convert Android content URI to local file path
+          path = await uriToPath(uri);
+        } else if (Platform.OS === 'ios') {
+          // On iOS, the URI is a direct file path
+          path = uri.replace('file://', '');
+        }
+        console.log('Converted directory path:', path);
         setDownloadUri(path);
       }
     } catch (error) {
@@ -331,7 +353,8 @@ export default function HomeScreen ({ navigation }) {
     setIsSettingOpen(false)
 
     switch (index) {
-      case 0:        
+      case 0:
+        setDownloadPath();
         break;
       case 1:
         navigation.navigate('SettingScreen', {
@@ -368,11 +391,22 @@ export default function HomeScreen ({ navigation }) {
       });
   };
 
+  function prettyBytes(num) {
+    const units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const neg = num < 0;
+    if (neg) num = -num;
+    if (num < 1) return (neg ? '-' : '') + num + ' B';
+    const exponent = Math.min(Math.floor(Math.log(num) / Math.log(1000)), units.length - 1);
+    const unit = units[exponent];
+    num = Number((num / Math.pow(1000, exponent)).toFixed(1));
+    return (neg ? '-' : '') + num + ' ' + unit;
+  }
+
   const renderFileItem = ({ item }) => {
     return (
       <TouchableOpacity onPress={() => openFile(`file://${item.path}`)}>
-        <View style={{ height: 20, width: '100%', marginTop: 5}}>
-          <Text style={HomeStyle.itemText}>&#8226; {item.name}</Text>
+        <View style={{ height: 20, width: '100%', marginTop: 5, paddingRight: 15}}>
+          <Text style={HomeStyle.itemText}>&#8226; {item.name} ({prettyBytes(item.size)})</Text>
         </View> 
       </TouchableOpacity>
     ); 
@@ -386,7 +420,7 @@ export default function HomeScreen ({ navigation }) {
           <View style={HomeStyle.cellTitleView}>
             <Text style={HomeStyle.cellTitleText}>{item.savedInfo.torrentName}</Text>
             <TouchableOpacity style={HomeStyle.deleteButton} onPress={() => deleteTorrent(item.infoHash)}>
-              <Text style={HomeStyle.deleteButtonText}>🗑️Delete</Text>
+              <Text style={HomeStyle.deleteButtonText}>🗑️</Text>
             </TouchableOpacity>
           </View>
 
@@ -394,11 +428,7 @@ export default function HomeScreen ({ navigation }) {
             <View style={{ height: 20, width: '100%'}}>
               <Text style={HomeStyle.savedInfoItemText}>{item.infoHash}</Text>
             </View>
-            <View style={{ height: 20, width: '100%'}}>
-              <Text style={HomeStyle.savedInfoItemText}>
-                {item.savedInfo.fileCount} files&nbsp;({item.savedInfo.length})
-              </Text>
-            </View> 
+          
             <View style={{ height: 20, width: '100%'}}>
              <ScrollView
                 horizontal
@@ -416,15 +446,22 @@ export default function HomeScreen ({ navigation }) {
             </View> 
           </View>
 
-          <ScrollView style={{flex: 1}} nestedScrollEnabled>
-            <FlatList
-              showsVerticalScrollIndicator={true}
-              style={{flex: 1}}
-              data={item.savedInfo.files}
-              keyExtractor={(file) => file.name}
-              renderItem={renderFileItem}
-            />
-          </ScrollView>
+          <View style={{ flex: 1, position: 'relative' }}>
+            <View style={{ position: 'absolute', top: '30%', right: 0, padding: 10, zIndex: 1 }}>
+              <Text style={HomeStyle.savedInfoItemText}>
+                {item.savedInfo.fileCount} files&nbsp;({item.savedInfo.length})
+              </Text>
+            </View>
+            <ScrollView style={{ flex: 1 }} nestedScrollEnabled>
+              <FlatList
+                showsVerticalScrollIndicator={true}
+                style={{ flex: 1 }}
+                data={item.savedInfo.files}
+                keyExtractor={(file) => file.name}
+                renderItem={renderFileItem}
+              />
+            </ScrollView>
+          </View>
         </View>
       </View>
     );
@@ -458,13 +495,13 @@ export default function HomeScreen ({ navigation }) {
 
           <View style={HomeStyle.downloadingButtons}>
             <TouchableOpacity style={HomeStyle.button} onPress={() => pauseDownload(item.infoHash)} >
-              <Text style={HomeStyle.buttontText}>Pause</Text>   
+              <Text style={{color:'#111', fontSize: 14}}>Pause</Text>   
             </TouchableOpacity>
             <TouchableOpacity style={HomeStyle.button} onPress={() => resumeDownload(item.infoHash)} >
-              <Text style={HomeStyle.buttontText}>Resume</Text>   
+              <Text style={{color:'#111', fontSize: 14}}>Resume</Text>   
             </TouchableOpacity>
             <TouchableOpacity style={HomeStyle.button} onPress={() => stopDownload(item.infoHash)} >
-              <Text style={HomeStyle.buttontText}>Stop</Text>   
+              <Text style={{color:'#111', fontSize: 14}}>Stop</Text>   
             </TouchableOpacity>
           </View>
         </View>
@@ -482,23 +519,12 @@ export default function HomeScreen ({ navigation }) {
     }
   }
 
-  const handleLoadStart = () => {
-    console.log('WebView loading started...');
-  };
-
-  const handleLoadEnd = () => {
-    console.log('WebView loading ended.');
-  };
-
-  const handleLoadError = (error) => {
-    console.error('WebView loading error:', error);
-  };
   return(
       <Background>
         <View style = {HomeStyle.navigationView}>
           <Text style={HomeStyle.titleText}>Faptor</Text>
           <TouchableOpacity style={HomeStyle.settingButton} onPress={() => setIsSettingOpen(prev => !prev)}>
-            <Text style={{color: '#888'}}>&#9881; Settings</Text>
+            <Text style={{color: '#111'}}>&#9881; Settings</Text>
           </TouchableOpacity>
         </View>
 
@@ -525,7 +551,7 @@ export default function HomeScreen ({ navigation }) {
 
             <View style={HomeStyle.addButtonsContainer}>
               <TouchableOpacity onPress={() => setModalVisible(true)} style={HomeStyle.addTorrentLinkButton}>
-                <Text style={{fontSize: 13, color: '#324818'}}>+ Torrent Link</Text>
+                <Text style={{fontSize: 13, color: '#111'}}>+ Torrent Link</Text>
               </TouchableOpacity>
               <View style={HomeStyle.gap} />
               <WebView
