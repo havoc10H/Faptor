@@ -86,16 +86,17 @@
 
     document.getElementById('fileInput').addEventListener('change', function(event) {
       if (fileInput.files.length === 0) {
-        //alert('Please select a .torrent file.');
+        // alert('Please select a .torrent file.');
         return;
       }
 
       const file = fileInput.files[0];
       if (!file.name.endsWith('.torrent')) {
-        //alert('Please select a .torrent file.');
+        // alert('Please select a .torrent file.');
         return;
       }
       addTorrent(file);
+      fileInput.value = '';
     });
 
     function addTorrentFile() {

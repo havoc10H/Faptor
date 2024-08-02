@@ -27,9 +27,9 @@ const requestPermissions = async () => {
         },
       );
       if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-        console.log('Storage Permission Granted.');
+        showMessage({ message: `Storage Permission Granted.`, type: 'success' });
       } else {
-        console.log('Storage Permission Denied.');
+        showMessage({ message: `Storage Permission Denied.`, type: 'error' });
       }
     } catch (err) {
       console.warn(err);
@@ -37,9 +37,9 @@ const requestPermissions = async () => {
   } else {
     const result = await request(PERMISSIONS.IOS.PHOTO_LIBRARY);
     if (result === RESULTS.GRANTED) {
-      console.log('Photo Library Permission Granted.');
+      showMessage({ message: `Photo Library Permission Granted.`, type: 'success' });
     } else {
-      console.log('Photo Library Permission Denied.');
+      showMessage({ message: `Storage Permission Denied.`, type: 'error' });
     }
   }
 };
@@ -81,11 +81,11 @@ export default function HomeScreen ({ navigation }) {
 
   const saveTorrents = async (updatedTorrents) => {
     try {
-      const filePath  = `${RNFS.DocumentDirectoryPath}/${savedTorrentsFileName}`;
-      await RNFS.writeFile(filePath, JSON.stringify(updatedTorrents));
-      console.log(filePath);
+      const filteredTorrents = updatedTorrents.filter(torrent => torrent.isDownloading === false);
+      const filePath = `${RNFS.DocumentDirectoryPath}/${savedTorrentsFileName}`;
+      await RNFS.writeFile(filePath, JSON.stringify(filteredTorrents));
     } catch (error) {
-      showMessage({message: `Error saving torrents`, type: 'error'});
+      showMessage({ message: `Error saving torrents`, type: 'error' });
     }
   }
   
@@ -107,51 +107,42 @@ export default function HomeScreen ({ navigation }) {
   }
 
   const deleteTorrent = (torrentInfoHash) => {
-    console.log('delete', torrentInfoHash);    
     const updatedTorrents = torrents.filter(torrent => torrent.infoHash !== torrentInfoHash);
     setTorrents(updatedTorrents);
     saveTorrents(updatedTorrents);
 
     const message = JSON.stringify({ action: 'deleteTorrent', torrentInfoHash });
-    console.log('delete', message);
     sendMessageToWebview(message);
   }
 
   
   const startDownload = (torrentInfoHash) => {
     const message = JSON.stringify({ action: 'startDownload', torrentInfoHash});
-    console.log('start', message);
     sendMessageToWebview(message);
   }
 
   const pauseDownload = (torrentInfoHash) => {
     const message = JSON.stringify({ action: 'pauseDownload', torrentInfoHash });
-    console.log('pause', message);
     sendMessageToWebview(message);
   }
 
   const resumeDownload = (torrentInfoHash) => {
     const message = JSON.stringify({ action: 'resumeDownload', torrentInfoHash });
-    console.log('resume', message);
     sendMessageToWebview(message);
   }
 
   const stopDownload = (torrentInfoHash) => {
     const message = JSON.stringify({ action: 'stopDownload', torrentInfoHash });
-    console.log('stop', message);
     sendMessageToWebview(message);
   }
 
   const stopDuplication = (torrentInfoHash) => {
     const message = JSON.stringify({ action: 'stopDuplication', torrentInfoHash });
-    console.log('stop duplicated', message);
     sendMessageToWebview(message);
   }
   const sendMessageToWebview = function(message) {
     if (webviewRef.current) {
       webviewRef.current.postMessage(message);
-    } else {
-      console.log('WebView reference is not set.');
     }
   }
 
@@ -160,15 +151,12 @@ export default function HomeScreen ({ navigation }) {
       const data = JSON.parse(event.nativeEvent.data);
       switch (data.flag) {
       case -1: // duplicate torrent error
-        console.log('duplicated torrent error...');
         showMessage({message: `Torrent is already exists.`, type: 'warning'});
         break;
       case 0: // start torrent downloading
-        console.log('start torrent downloading...');
         const isDuplicate = torrents.some(torrent => torrent.infoHash === data.torrentInfoHash);
 
         if (isDuplicate) {
-          console.log('Duplicated');
           showMessage({ message: `Torrent already exists.`, type: 'warning' });
           stopDuplication(data.torrentInfoHash); // Assuming stopDownload is defined
         } else {
@@ -195,15 +183,12 @@ export default function HomeScreen ({ navigation }) {
 
         break;
       case 2: // stop
-        console.log('stopped');
         setTorrents(prev => prev.filter(torrent => torrent.infoHash !== data.torrentInfoHash));
         break;
       case 3: // done
-        console.log('done');
         updateTorrentInfo(data.torrentInfo);
         break;
       case 6: // receive chunk file
-        console.log('receive chunk');
         handleChunk(data.torrentInfoHash, data.fileName, data.chunkIndex, data.chunk, data.isLastContent);
         break;
       }
@@ -274,7 +259,6 @@ export default function HomeScreen ({ navigation }) {
     try {
       const binaryData = Buffer.from(base64Data, 'base64');
       await RNFS.appendFile(filePath, binaryData.toString('base64'), 'base64');
-      console.log(`Chunk ${chunkIndex} saved to ${filePath}`);
     } catch (error) {
       console.error('Error saving chunk:', error);
     }
@@ -308,7 +292,6 @@ export default function HomeScreen ({ navigation }) {
       const res = await DocumentPicker.pickDirectory();
       if (res) {
         const uri = res.uri;
-        console.log('Selected directory URI:', uri);
 
         let path;
         if (Platform.OS === 'android') {
@@ -318,7 +301,6 @@ export default function HomeScreen ({ navigation }) {
           // On iOS, the URI is a direct file path
           path = uri.replace('file://', '');
         }
-        console.log('Converted directory path:', path);
         setDownloadUri(path);
       }
     } catch (error) {
@@ -340,7 +322,6 @@ export default function HomeScreen ({ navigation }) {
   const handleOkPress = () => {
     setModalVisible(false);
     const message = JSON.stringify({ action: 'addTorrentLink', torrentId });
-    console.log(message);
     sendMessageToWebview(message);
   };
 
@@ -384,10 +365,10 @@ export default function HomeScreen ({ navigation }) {
   const openFile = (fileUri) => {
     FileViewer.open(fileUri)
       .then(() => {
-        console.log('File opened successfully');
+        showMessage({ message: `File opened successfully`, type: 'success' });
       })
       .catch(error => {
-        console.error('Error opening file:', error);
+        showMessage({ message: `Error opening file:`, type: 'error' });
       });
   };
 
