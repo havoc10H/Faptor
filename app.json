@@ -1,4 +1,10 @@
 {
   "name": "Faptor",
-  "displayName": "Faptor"
+  "displayName": "Faptor",
+  "version": "1.0.0",
+  "orientation": "portrait",
+  "android": {
+      "package": "com.applife.faptor", // Change to your app's Android package name
+      "versionCode": 1
+  }
 }
