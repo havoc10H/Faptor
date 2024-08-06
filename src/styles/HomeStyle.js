@@ -93,14 +93,28 @@ const HomeStyle = StyleSheet.create({
 	},
 
 	deleteButtonText: {
-		fontSize: 12,
-		color: '#eee'
+		fontSize: 15,
+		color: '#fff',
+		top: -3
+	},
+
+	openFolderButtonText: {
+		fontSize: 15,
+		color: '#fff',
+		top: -3
 	},
 
 	savedInfoItemText: {
 		fontSize: 10,
 	    textAlign: 'center', // Center text horizontally,
 	    color: '#111'
+	},
+
+	fileNameText: {
+		height: 20, 
+		width: '100%', 
+		marginTop: 5, 
+		paddingRight: 15
 	},
 
 	// styles for downloading status

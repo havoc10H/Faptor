@@ -44,6 +44,24 @@ const requestPermissions = async () => {
   }
 };
 
+function prettyBytes(num) {
+  const units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  const neg = num < 0;
+  if (neg) num = -num;
+  if (num < 1) return (neg ? '-' : '') + num + ' B';
+  const exponent = Math.min(Math.floor(Math.log(num) / Math.log(1000)), units.length - 1);
+  const unit = units[exponent];
+  num = Number((num / Math.pow(1000, exponent)).toFixed(1));
+  return (neg ? '-' : '') + num + ' ' + unit;
+}
+
+const mediaFileExtensions = ['.mp3', '.mp4', '.wav', '.mov', '.jpg', '.jpeg', '.png', '.gif'];
+
+const isMediaFile = (fileName) => {
+  const extension = fileName.split('.').pop().toLowerCase();
+  return mediaFileExtensions.includes(`.${extension}`);
+};
+  
 export default function HomeScreen ({ navigation }) {
   const settingMenu = [
     {key:'0', value:'Download Directory', icon: '📁'},
@@ -189,7 +207,7 @@ export default function HomeScreen ({ navigation }) {
         updateTorrentInfo(data.torrentInfo);
         break;
       case 6: // receive chunk file
-        handleChunk(data.torrentInfoHash, data.fileName, data.chunkIndex, data.chunk, data.isLastContent);
+        handleChunk(data.torrentInfoHash, data.fileName, data.chunk, data.chunkIndex);
         break;
       }
     } catch (error) {
@@ -244,20 +262,20 @@ export default function HomeScreen ({ navigation }) {
       });  
   }
 
-  const handleChunk = async (torrentInfoHash, fileName, chunkIndex, base64Data, isLastContent) => {
+  const handleChunk = async (torrentInfoHash, fileName, chunkData, chunkIndex) => {
     const downloadDir = `${downloadUri}/${torrentInfoHash}`;
     const filePath = `${downloadDir}/${fileName}`;
     const dirExists = await RNFS.exists(downloadDir);
     if (!dirExists) {
       await RNFS.mkdir(downloadDir);
     }
-    await handleChunkDownload(filePath, chunkIndex, base64Data);
+    await handleChunkDownload(filePath, chunkData, chunkIndex);
     setTorrentFiles(downloadDir, torrentInfoHash);
   }
 
-  const handleChunkDownload = async (filePath, chunkIndex, base64Data) => {
+  const handleChunkDownload = async (filePath, chunkData, chunkIndex) => {
     try {
-      const binaryData = Buffer.from(base64Data, 'base64');
+      const binaryData = Buffer.from(chunkData, 'base64');
       await RNFS.appendFile(filePath, binaryData.toString('base64'), 'base64');
     } catch (error) {
       console.error('Error saving chunk:', error);
@@ -288,24 +306,17 @@ export default function HomeScreen ({ navigation }) {
 
   // Set settings for this app.
   const setDownloadPath = async () => {
-    try {
-      const res = await DocumentPicker.pickDirectory();
-      if (res) {
-        const uri = res.uri;
+    const res = await DocumentPicker.pickDirectory();
+    if (res) {
+      const uri = res.uri;
 
-        let path;
-        if (Platform.OS === 'android') {
-          // Convert Android content URI to local file path
-          path = await uriToPath(uri);
-        } else if (Platform.OS === 'ios') {
-          // On iOS, the URI is a direct file path
-          path = uri.replace('file://', '');
-        }
-        setDownloadUri(path);
+      let path;
+      if (Platform.OS === 'android') {
+        path = await uriToPath(uri);
+      } else if (Platform.OS === 'ios') {
+        path = uri.replace('file://', '');
       }
-    } catch (error) {
-      console.error('Error setting download directory:', error);
-      showMessage({ message: `Error setting download directory: ${error.message}`, type: 'error' });
+      setDownloadUri(path);
     }
   };
 
@@ -362,32 +373,55 @@ export default function HomeScreen ({ navigation }) {
     }
   }
 
-  const openFile = (fileUri) => {
-    FileViewer.open(fileUri)
-      .then(() => {
-        showMessage({ message: `File opened successfully`, type: 'success' });
-      })
-      .catch(error => {
-        showMessage({ message: `Error opening file:`, type: 'error' });
-      });
-  };
-
-  function prettyBytes(num) {
-    const units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-    const neg = num < 0;
-    if (neg) num = -num;
-    if (num < 1) return (neg ? '-' : '') + num + ' B';
-    const exponent = Math.min(Math.floor(Math.log(num) / Math.log(1000)), units.length - 1);
-    const unit = units[exponent];
-    num = Number((num / Math.pow(1000, exponent)).toFixed(1));
-    return (neg ? '-' : '') + num + ' ' + unit;
+  const openFolder = async (fileUri) => {
+    DocumentPicker.pickDirectory();
   }
 
+  
+
+  const sortFiles = (files) => {
+    return files.sort((a, b) => {
+      const aIsMedia = isMediaFile(a.name);
+      const bIsMedia = isMediaFile(b.name);
+      if (aIsMedia && !bIsMedia) return -1;
+      if (!aIsMedia && bIsMedia) return 1;
+      return 0;
+    });
+  };
+
+  const openFile = (fileUri, isMediaFileFlag) => {
+    if (!isMediaFileFlag) {
+      return;
+    }
+    try {
+      const formattedPath = Platform.OS === 'ios' ? fileUri.replace('file://', '') : fileUri;
+
+      FileViewer.open(formattedPath)
+        .then(() => {
+          showMessage({ message: `File opened successfully`, type: 'success' });
+        })
+        .catch(error => {
+          showMessage({ message: `Error opening file:`, type: 'error' });
+        });
+    } catch (error) {
+      showMessage({ message: `Error opening file:`, type: 'error' });
+    }
+  };
+
+
   const renderFileItem = ({ item }) => {
+    const filePath = `file://${item.path}`;
+    const isMediaFileFlag = isMediaFile(item.name);
+
     return (
-      <TouchableOpacity onPress={() => openFile(`file://${item.path}`)}>
+      <TouchableOpacity onPress={() => openFile(filePath, isMediaFileFlag)}>
         <View style={{ height: 20, width: '100%', marginTop: 5, paddingRight: 15}}>
-          <Text style={HomeStyle.itemText}>&#8226; {item.name} ({prettyBytes(item.size)})</Text>
+          <Text style={HomeStyle.itemText}>
+            &#8226; {item.name} ({prettyBytes(item.size)})
+            {isMediaFileFlag && (
+              '▶️'
+            )}
+          </Text>
         </View> 
       </TouchableOpacity>
     ); 
@@ -423,6 +457,9 @@ export default function HomeScreen ({ navigation }) {
                 >
                   {item.savedInfo.location}
                 </Text>
+                <TouchableOpacity onPress={() => openFolder(item.savedInfo.location)}>
+                  <Text style={HomeStyle.openFolderButtonText}>&#128193;</Text>
+                </TouchableOpacity>
               </ScrollView>
             </View> 
           </View>
@@ -437,7 +474,7 @@ export default function HomeScreen ({ navigation }) {
               <FlatList
                 showsVerticalScrollIndicator={true}
                 style={{ flex: 1 }}
-                data={item.savedInfo.files}
+                data={sortFiles(item.savedInfo.files)}
                 keyExtractor={(file) => file.name}
                 renderItem={renderFileItem}
               />

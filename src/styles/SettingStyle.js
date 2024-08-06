@@ -58,7 +58,7 @@ const SettingStyle = StyleSheet.create({
         height: 36,
         borderRadius: 4,
         fontSize: 12,
-        borderColor: '#888',
+        borderColor: '#111',
         borderWidth: 1,
         paddingLeft: 12,
         paddingRight: 12,
@@ -67,13 +67,14 @@ const SettingStyle = StyleSheet.create({
     byteText:{
         marginLeft: 8,
         fontSize: 12,
+        color: '#111'
     },
 
     saveButton: {
         width: 120,
         height: 36,
         marginTop: 32,
-        borderRadius: 2,
+        borderRadius: 5,
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#8bc34a'
