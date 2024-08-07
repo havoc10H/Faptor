@@ -79,7 +79,7 @@ export default function HomeScreen ({ navigation }) {
   const [torrents, setTorrents] = useState([]);
 
   const sourceUri = Platform.select({
-    ios: 'file:///assets/torrent.html', // Update if needed
+    ios: 'bundle/torrent.html', // Update if needed
     android: 'file:///android_asset/torrent.html' // Local HTML file for Android
   });
 
